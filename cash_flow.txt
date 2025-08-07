@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flujo de Caja - El Juego</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #1a202c; /* Color de fondo oscuro */
+            color: #e2e8f0;
+            overflow: hidden;
+        }
+        .font-bebas {
+            font-family: 'Bebas Neue', cursive;
+        }
+        .game-board-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+        }
+        .game-board {
+            position: relative;
+            width: 700px;
+            height: 700px;
+            background-color: #0d4b2e; /* Verde oscuro de mesa de juego */
+            border-radius: 50%;
+            border: 10px solid #c8a464; /* Borde dorado */
+            box-shadow: 0 0 30px rgba(0,0,0,0.7);
+        }
+        .board-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            height: 300px;
+            background-color: #08331e;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            border: 5px solid #c8a464;
+        }
+        .board-center h1 {
+            color: #fde68a;
+            font-size: 2.5rem;
+            letter-spacing: 2px;
+        }
+        .board-center p {
+            color: #d1d5db;
+            font-size: 0.9rem;
+        }
+        .board-space {
+            position: absolute;
+            width: 90px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: black;
+            border: 2px solid #4a3a24;
+            transform-origin: center 350px;
+            padding: 2px;
+            box-sizing: border-box;
+        }
+        .player-token {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid white;
+            transition: transform 0.5s ease-in-out;
+            z-index: 10;
+        }
+        /* Colores de las casillas */
+        .space-payday { background-color: #4caf50; } /* Verde */
+        .space-opportunity { background-color: #2196f3; } /* Azul */
+        .space-doodad { background-color: #f44336; } /* Rojo */
+        .space-market { background-color: #ffc107; } /* Amarillo */
+        .space-charity { background-color: #9c27b0; } /* Púrpura */
+        .space-baby { background-color: #e91e63; } /* Rosa */
+        .space-downsized { background-color: #607d8b; } /* Gris */
+
+        /* Paneles laterales */
+        .side-panel {
+            position: fixed;
+            top: 0;
+            height: 100vh;
+            width: 350px;
+            background-color: #2d3748;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .left-panel { left: 0; }
+        .right-panel { right: 0; }
+        
+        .tabs button {
+            transition: all 0.3s;
+        }
+        .tabs button.active {
+            background-color: #fde68a;
+            color: #1a202c;
+        }
+        .tab-content {
+            flex-grow: 1;
+        }
+        .financial-sheet table {
+            width: 100%;
+            font-size: 0.8rem;
+        }
+        .financial-sheet th, .financial-sheet td {
+            padding: 4px 8px;
+            text-align: left;
+            border-bottom: 1px solid #4a5568;
+        }
+        .financial-sheet th {
+            font-weight: bold;
+            color: #a0aec0;
+        }
+        .summary-label {
+            color: #a0aec0;
+        }
+        .summary-value {
+            color: #f7fafc;
+            font-weight: bold;
+        }
+        .log-container {
+            flex-grow: 1;
+            background-color: #1a202c;
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.8rem;
+            overflow-y: auto;
+            margin-top: 10px;
+            border: 1px solid #4a5568;
+        }
+        .log-message {
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px dashed #4a5568;
+        }
+        /* Modals */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .modal-content {
+            background-color: #2d3748;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            border: 2px solid #c8a464;
+        }
+        .dice-animation {
+            font-size: 5rem;
+            color: #fde68a;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Contenedor Principal del Juego -->
+    <div class="game-board-container">
+        <!-- Tablero de Juego -->
+        <div class="game-board" id="game-board">
+            <div class="board-center">
+                <h1 class="font-bebas">CASHFLOW</h1>
+                <p>Sal de la Carrera de la Rata</p>
+            </div>
+            <!-- Las casillas se generan dinámicamente con JS -->
+        </div>
+    </div>
+
+    <!-- Panel Izquierdo: Hojas Financieras de Jugadores -->
+    <div class="side-panel left-panel">
+        <h2 class="text-2xl font-bold mb-4 text-center text-yellow-300 font-bebas tracking-wider">Estado Financiero</h2>
+        <div id="player-tabs" class="tabs flex border-b border-gray-600 mb-4">
+            <!-- Pestañas de jugador se generan con JS -->
+        </div>
+        <div id="tab-content-container" class="tab-content">
+            <!-- Contenido de las pestañas se genera con JS -->
+        </div>
+    </div>
+
+    <!-- Panel Derecho: Acciones y Log -->
+    <div class="side-panel right-panel">
+        <h2 class="text-2xl font-bold mb-4 text-center text-yellow-300 font-bebas tracking-wider">Panel de Control</h2>
+        <div id="turn-indicator" class="text-center p-3 mb-4 bg-gray-800 rounded-lg">
+            <p class="text-lg">Turno de: <span id="current-player-name" class="font-bold text-yellow-400"></span></p>
+        </div>
+        <div class="grid grid-cols-1 gap-4 mb-4">
+            <button id="roll-dice-btn" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300">Lanzar Dado</button>
+            <button id="manage-debt-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300">Gestionar Deuda</button>
+             <button id="next-turn-btn" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 hidden">Siguiente Turno</button>
+        </div>
+        <h3 class="text-xl font-bold mb-2 text-center text-yellow-300 font-bebas tracking-wider">Registro de Eventos</h3>
+        <div id="log-container" class="log-container"></div>
+    </div>
+
+    <!-- Modals (Ocultos por defecto) -->
+    <div id="setup-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-3xl font-bold mb-6 text-yellow-300 font-bebas">Configuración de la Partida</h2>
+            <div class="mb-4">
+                <label for="player-count" class="block mb-2">Número de Jugadores:</label>
+                <select id="player-count" class="w-full p-2 rounded bg-gray-700 text-white">
+                    <option value="1">1</option>
+                    <option value="2" selected>2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                </select>
+            </div>
+            <div id="player-setup-fields" class="space-y-4 mb-6">
+                <!-- Campos para jugadores se generan con JS -->
+            </div>
+            <button id="start-game-btn" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 text-xl">¡EMPEZAR JUEGO!</button>
+        </div>
+    </div>
+
+    <div id="dice-modal" class="modal hidden">
+        <div class="modal-content bg-transparent border-none shadow-none">
+            <div id="dice-animation" class="dice-animation"></div>
+        </div>
+    </div>
+    
+    <div id="card-modal" class="modal hidden">
+        <div class="modal-content" id="card-modal-content">
+            <!-- Contenido de la tarjeta se genera con JS -->
+        </div>
+    </div>
+
+    <div id="debt-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4 text-yellow-300">Gestión de Deuda</h2>
+            <p class="mb-4">Deuda Bancaria Actual: <span id="current-debt" class="font-bold"></span></p>
+            <div class="mb-4">
+                <label for="loan-amount" class="block mb-2">Pedir Préstamo (múltiplos de 1000):</label>
+                <input type="number" id="loan-amount" step="1000" min="1000" class="w-full p-2 rounded bg-gray-700 text-white" placeholder="Ej: 2000">
+                <button id="take-loan-btn" class="w-full mt-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Pedir Préstamo</button>
+            </div>
+            <div class="mb-4">
+                 <label for="pay-debt-amount" class="block mb-2">Pagar Deuda (múltiplos de 1000):</label>
+                <input type="number" id="pay-debt-amount" step="1000" min="1000" class="w-full p-2 rounded bg-gray-700 text-white" placeholder="Ej: 1000">
+                <button id="pay-debt-btn" class="w-full mt-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">Pagar Deuda</button>
+            </div>
+            <button onclick="document.getElementById('debt-modal').classList.add('hidden')" class="w-full mt-4 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">Cerrar</button>
+        </div>
+    </div>
+
+
+<script>
+// --- LÓGICA DEL JUEGO (Clases y Datos) ---
+
+// Clases para representar la estructura de datos del juego.
+class FinancialStatement {
+    constructor(income, expenses, assets, liabilities, cash) {
+        this.income = income; // {Sueldo: 5000, ...}
+        this.expenses = expenses; // {Impuestos: 1000, ...}
+        this.assets = assets; // [{nombre, flujo_caja, tipo, valor_venta}, ...]
+        this.liabilities = liabilities; // {Hipoteca: 200000, ...}
+        this.cash = cash;
+    }
+
+    getTotalExpenses() {
+        return Object.values(this.expenses).reduce((sum, value) => sum + value, 0);
+    }
+
+    getPassiveIncome() {
+        return this.assets.reduce((sum, asset) => sum + asset.flujo_caja, 0);
+    }
+
+    getTotalIncome() {
+        return (this.income['Sueldo'] || 0) + this.getPassiveIncome();
+    }
+
+    getMonthlyCashflow() {
+        return this.getTotalIncome() - this.getTotalExpenses();
+    }
+}
+
+class Player {
+    constructor(profession, name, color) {
+        this.name = name;
+        this.professionName = profession.nombre;
+        this.dream = profession.sueño;
+        this.financialStatement = new FinancialStatement(
+            { 'Sueldo': profession.sueldo },
+            { ...profession.gastos },
+            [],
+            { ...profession.pasivos },
+            profession.ahorros
+        );
+        this.boardPosition = 0;
+        this.downsizedTurns = 0;
+        this.charityTurns = 0;
+        this.color = color;
+        this.tokenElement = null;
+    }
+}
+
+// Clases para las tarjetas
+class Opportunity {
+    constructor(nombre, tipo, costo, flujo_caja, valor_venta) {
+        this.nombre = nombre;
+        this.tipo = tipo; // 'acciones', 'propiedad', 'negocio'
+        this.costo = costo;
+        this.flujo_caja = flujo_caja;
+        this.valor_venta = valor_venta;
+        this.descripcion = `${nombre} (Costo: $${costo.toLocaleString()}, Flujo de Caja: $${flujo_caja.toLocaleString()})`;
+    }
+}
+
+class Doodad {
+    constructor(descripcion, costo) {
+        this.descripcion = descripcion;
+        this.costo = costo;
+    }
+}
+
+class Market {
+    constructor(descripcion, tipo, valor_oferta, activo_requerido) {
+        this.descripcion = descripcion;
+        this.tipo = tipo;
+        this.valor_oferta = valor_oferta;
+        this.activo_requerido = activo_requerido;
+    }
+}
+
+// --- CLASE PRINCIPAL DEL JUEGO ---
+class Game {
+    constructor() {
+        this.players = [];
+        this.currentPlayerIndex = 0;
+        this.board = this.createRatRaceBoard();
+        this.professions = this.createProfessions();
+        this.decks = {
+            opportunity: this.createOpportunityDeck(),
+            doodad: this.createDoodadDeck(),
+            market: this.createMarketDeck()
+        };
+        this.isTurnInProgress = false;
+
+        // Bindeo de elementos del DOM
+        this.dom = {
+            board: document.getElementById('game-board'),
+            playerTabs: document.getElementById('player-tabs'),
+            tabContentContainer: document.getElementById('tab-content-container'),
+            currentPlayerName: document.getElementById('current-player-name'),
+            rollDiceBtn: document.getElementById('roll-dice-btn'),
+            manageDebtBtn: document.getElementById('manage-debt-btn'),
+            nextTurnBtn: document.getElementById('next-turn-btn'),
+            logContainer: document.getElementById('log-container'),
+            setupModal: document.getElementById('setup-modal'),
+            playerCountSelect: document.getElementById('player-count'),
+            playerSetupFields: document.getElementById('player-setup-fields'),
+            startGameBtn: document.getElementById('start-game-btn'),
+            diceModal: document.getElementById('dice-modal'),
+            diceAnimation: document.getElementById('dice-animation'),
+            cardModal: document.getElementById('card-modal'),
+            cardModalContent: document.getElementById('card-modal-content'),
+            debtModal: document.getElementById('debt-modal'),
+            currentDebt: document.getElementById('current-debt'),
+            loanAmountInput: document.getElementById('loan-amount'),
+            takeLoanBtn: document.getElementById('take-loan-btn'),
+            payDebtAmountInput: document.getElementById('pay-debt-amount'),
+            payDebtBtn: document.getElementById('pay-debt-btn'),
+        };
+
+        this.setupEventListeners();
+        this.initSetupScreen();
+    }
+
+    // --- CONFIGURACIÓN E INICIO ---
+
+    setupEventListeners() {
+        this.dom.playerCountSelect.addEventListener('change', () => this.initSetupScreen());
+        this.dom.startGameBtn.addEventListener('click', () => this.startGame());
+        this.dom.rollDiceBtn.addEventListener('click', () => this.performTurn());
+        this.dom.manageDebtBtn.addEventListener('click', () => this.showDebtModal());
+        this.dom.nextTurnBtn.addEventListener('click', () => this.nextTurn());
+        this.dom.takeLoanBtn.addEventListener('click', () => this.takeLoan());
+        this.dom.payDebtBtn.addEventListener('click', () => this.payDebt());
+    }
+
+    initSetupScreen() {
+        const count = parseInt(this.dom.playerCountSelect.value);
+        this.dom.playerSetupFields.innerHTML = '';
+        const professionNames = Object.values(this.professions).map(p => p.nombre);
+
+        for (let i = 0; i < count; i++) {
+            const professionOptions = professionNames.map(name => `<option value="${name}">${name}</option>`).join('');
+            this.dom.playerSetupFields.innerHTML += `
+                <div class="p-4 bg-gray-800 rounded-lg">
+                    <h4 class="font-bold text-lg text-yellow-400 mb-2">Jugador ${i + 1}</h4>
+                    <input type="text" class="player-name w-full p-2 rounded bg-gray-700 text-white mb-2" placeholder="Nombre del Jugador" value="Jugador ${i + 1}">
+                    <select class="player-profession w-full p-2 rounded bg-gray-700 text-white">
+                        ${professionOptions}
+                    </select>
+                </div>
+            `;
+            // Asignar una profesión diferente por defecto
+             this.dom.playerSetupFields.querySelector(`select.player-profession:last-child`).selectedIndex = i % professionNames.length;
+        }
+    }
+
+    startGame() {
+        const playerFields = this.dom.playerSetupFields.children;
+        const colors = ["#ef4444", "#3b82f6", "#22c55e", "#a855f7"];
+        this.players = [];
+
+        for (let i = 0; i < playerFields.length; i++) {
+            const name = playerFields[i].querySelector('.player-name').value;
+            const professionName = playerFields[i].querySelector('.player-profession').value;
+            if (!name || !professionName) {
+                alert("Por favor, completa todos los campos.");
+                return;
+            }
+            const profession = Object.values(this.professions).find(p => p.nombre === professionName);
+            this.players.push(new Player(profession, name, colors[i]));
+        }
+
+        this.dom.setupModal.classList.add('hidden');
+        this.drawBoard();
+        this.createPlayerTokens();
+        this.updateUI();
+        this.logMessage("¡Juego iniciado! ¡Que gane el mejor estratega!", "game");
+        this.logMessage(`Es el turno de ${this.players[0].name}. Haz clic en 'Lanzar Dado'.`, "system");
+    }
+
+    // --- LÓGICA DE DATOS DEL JUEGO ---
+
+    createRatRaceBoard() {
+        let spaces = ['Día de Pago', 'Oportunidad', 'Capricho', 'Oportunidad', 'Mercado', 'Oportunidad', 'Capricho', 'Oportunidad'];
+        spaces = spaces.concat(spaces).concat(spaces); // 24 casillas
+        spaces[10] = 'Caridad';
+        spaces[16] = 'Bebé';
+        spaces[22] = 'Despido';
+        return spaces;
+    }
+
+    createProfessions() {
+        return {
+            "1": { nombre: "Médico", sueldo: 13200, ahorros: 400, gastos: { "Impuestos": 3300, "Pago de Hipoteca": 1900, "Otros Gastos": 1000, "Pago de Préstamos": 0 }, pasivos: { "Hipoteca": 200000, "Préstamos Bancarios": 0 }, sueño: "Comprar una isla" },
+            "2": { nombre: "Profesor", sueldo: 3300, ahorros: 500, gastos: { "Impuestos": 700, "Pago de Hipoteca": 500, "Otros Gastos": 300, "Pago de Préstamos": 0 }, pasivos: { "Hipoteca": 50000, "Préstamos Bancarios": 0 }, sueño: "Viajar por el mundo" },
+            "3": { nombre: "Mecánico", sueldo: 2000, ahorros: 700, gastos: { "Impuestos": 400, "Pago de Hipoteca": 300, "Otros Gastos": 200, "Pago de Préstamos": 0 }, pasivos: { "Hipoteca": 30000, "Préstamos Bancarios": 0 }, sueño: "Taller de Lujo" },
+            "4": { nombre: "Piloto", sueldo: 9500, ahorros: 1500, gastos: { "Impuestos": 2400, "Pago de Hipoteca": 1300, "Otros Gastos": 700, "Pago de Préstamos": 0 }, pasivos: { "Hipoteca": 145000, "Préstamos Bancarios": 0 }, sueño: "Comprar un Jet Privado" },
+        };
+    }
+
+    createOpportunityDeck() {
+        return [
+            new Opportunity("Acciones MYT4U", "acciones", 1000, 10, 1500),
+            new Opportunity("Casa 3hab/2baños", "propiedad", 10000, 200, 80000),
+            new Opportunity("Negocio de Limpieza", "negocio", 1500, 150, 3000),
+            new Opportunity("Apartamento 2/1", "propiedad", 5000, 100, 45000),
+            new Opportunity("Fondo de Inversión", "acciones", 500, 5, 750),
+        ];
+    }
+    createDoodadDeck() {
+        return [
+            new Doodad("TV nueva 4K", 500),
+            new Doodad("Vacaciones de Lujo", 800),
+            new Doodad("Reparación del Auto", 300)
+        ];
+    }
+    createMarketDeck() {
+        return [
+            new Market("Comprador para tu Casa 3hab/2baños", "propiedad", 85000, "Casa 3hab/2baños"),
+            new Market("Comprador para tu Apartamento 2/1", "propiedad", 50000, "Apartamento 2/1"),
+            new Market("Crisis inmobiliaria, propiedades pierden 20% de valor", "global", -0.20, "propiedad")
+        ];
+    }
+
+    // --- LÓGICA DE TURNOS ---
+    
+    performTurn() {
+        if (this.isTurnInProgress) return;
+        this.isTurnInProgress = true;
+        this.dom.rollDiceBtn.disabled = true;
+
+        const player = this.players[this.currentPlayerIndex];
+
+        if (player.downsizedTurns > 0) {
+            player.downsizedTurns--;
+            this.logMessage(`Está despedido. Pierde este turno. Turnos restantes: ${player.downsizedTurns}`, "system");
+            this.dom.nextTurnBtn.classList.remove('hidden');
+            return;
+        }
+        
+        const diceRoll = player.charityTurns > 0 ? Math.ceil(Math.random() * 6) + Math.ceil(Math.random() * 6) : Math.ceil(Math.random() * 6);
+        if (player.charityTurns > 0) player.charityTurns--;
+
+        this.showDiceAnimation(diceRoll, () => {
+            this.logMessage(`Lanza el dado y saca un ${diceRoll}.`, "player");
+            
+            const oldPosition = player.boardPosition;
+            player.boardPosition = (player.boardPosition + diceRoll) % this.board.length;
+            
+            this.movePlayerToken(player, oldPosition, player.boardPosition);
+
+            // Día de pago al pasar por la casilla 0
+            if (player.boardPosition < oldPosition) {
+                this.handlePayday(player, true);
+            }
+            
+            setTimeout(() => {
+                const currentSpace = this.board[player.boardPosition];
+                this.logMessage(`Cae en la casilla: ${currentSpace}`, "system");
+                this.handleSpace(player, currentSpace);
+                this.updateUI();
+
+                if (this.checkWinCondition(player)) {
+                    this.handleWin(player);
+                } else {
+                    this.dom.nextTurnBtn.classList.remove('hidden');
+                }
+            }, 700); // Esperar a que la ficha termine de moverse
+        });
+    }
+    
+    nextTurn() {
+        this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
+        this.isTurnInProgress = false;
+        this.dom.rollDiceBtn.disabled = false;
+        this.dom.nextTurnBtn.classList.add('hidden');
+        this.updateUI();
+        this.logMessage(`Es el turno de ${this.players[this.currentPlayerIndex].name}.`, "system");
+    }
+
+    // --- MANEJO DE CASILLAS ---
+    
+    handleSpace(player, spaceType) {
+        switch (spaceType) {
+            case 'Día de Pago':
+                this.handlePayday(player, false);
+                break;
+            case 'Oportunidad':
+                this.drawCard('opportunity', player);
+                break;
+            case 'Capricho':
+                this.drawCard('doodad', player);
+                break;
+            case 'Mercado':
+                this.drawCard('market', player);
+                break;
+            case 'Bebé':
+                this.handleBaby(player);
+                break;
+            case 'Despido':
+                this.handleDownsized(player);
+                break;
+            case 'Caridad':
+                this.handleCharity(player);
+                break;
+        }
+    }
+
+    handlePayday(player, passed) {
+        const cashflow = player.financialStatement.getMonthlyCashflow();
+        player.financialStatement.cash += cashflow;
+        this.logMessage(`¡Día de Pago! ${passed ? 'Pasó por' : 'Cayó en'} la casilla y recibe su Flujo de Caja de $${cashflow.toLocaleString()}.`, "event");
+    }
+
+    handleBaby(player) {
+        this.logMessage("¡Felicidades, ha tenido un bebé!", "event");
+        const fs = player.financialStatement;
+        const childCost = Math.round((fs.income['Sueldo'] || 0) * 0.10);
+        fs.expenses['Gastos de Hijos'] = (fs.expenses['Gastos de Hijos'] || 0) + childCost;
+        this.logMessage(`Sus gastos aumentan en $${childCost.toLocaleString()} por mes.`, "system");
+    }
+
+    handleDownsized(player) {
+        this.logMessage("¡Ha sido despedido! Pierde 2 turnos y debe pagar sus gastos totales.", "event");
+        const fs = player.financialStatement;
+        const totalExpenses = fs.getTotalExpenses();
+        fs.cash -= totalExpenses;
+        player.downsizedTurns = 2;
+        this.logMessage(`Paga $${totalExpenses.toLocaleString()} de gastos.`, "system");
+        if (fs.cash < 0) {
+            this.logMessage("¡No tiene suficiente dinero! Necesita un préstamo.", "warning");
+        }
+    }
+
+    handleCharity(player) {
+        const fs = player.financialStatement;
+        const donation = Math.round(fs.getTotalIncome() * 0.10);
+        const content = `
+            <h3 class="text-xl font-bold mb-2 text-purple-300">Caridad</h3>
+            <p class="mb-4">Puedes donar el 10% de tu ingreso total ($${donation.toLocaleString()}) para poder usar 2 dados en tus próximos 3 turnos. ¿Deseas donar?</p>
+            <div class="flex justify-around">
+                <button id="donate-yes" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded">Sí, Donar</button>
+                <button id="donate-no" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded">No, gracias</button>
+            </div>
+        `;
+        this.showCardModal(content);
+
+        document.getElementById('donate-yes').onclick = () => {
+            if (fs.cash >= donation) {
+                fs.cash -= donation;
+                player.charityTurns = 3;
+                this.logMessage(`Ha donado $${donation.toLocaleString()}. ¡Gracias por tu generosidad!`, "event");
+            } else {
+                this.logMessage("Quería donar, pero no tiene suficiente dinero.", "warning");
+            }
+            this.hideCardModal();
+            this.updateUI();
+        };
+        document.getElementById('donate-no').onclick = () => this.hideCardModal();
+    }
+    
+    // --- MANEJO DE TARJETAS ---
+    drawCard(deckType, player) {
+        const deck = this.decks[deckType];
+        const card = deck[Math.floor(Math.random() * deck.length)];
+        const fs = player.financialStatement;
+        let content = '';
+
+        switch (deckType) {
+            case 'opportunity':
+                content = `
+                    <h3 class="text-xl font-bold mb-2 text-blue-300">Oportunidad</h3>
+                    <p class="mb-4">${card.descripcion}</p>
+                    <div class="flex justify-around">
+                        <button id="buy-opportunity" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded">Comprar</button>
+                        <button id="pass-opportunity" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded">Pasar</button>
+                    </div>
+                `;
+                this.showCardModal(content);
+                document.getElementById('buy-opportunity').onclick = () => {
+                    if (fs.cash >= card.costo) {
+                        fs.cash -= card.costo;
+                        fs.assets.push({ nombre: card.nombre, flujo_caja: card.flujo_caja, tipo: card.tipo, valor_venta: card.valor_venta });
+                        this.logMessage(`¡Ha adquirido ${card.nombre}!`, "event");
+                    } else {
+                        this.logMessage(`No tiene suficiente dinero para ${card.nombre}.`, "warning");
+                    }
+                    this.hideCardModal();
+                    this.updateUI();
+                };
+                document.getElementById('pass-opportunity').onclick = () => this.hideCardModal();
+                break;
+
+            case 'doodad':
+                content = `
+                    <h3 class="text-xl font-bold mb-2 text-red-300">Capricho</h3>
+                    <p class="mb-4">${card.descripcion}. Debes pagar $${card.costo.toLocaleString()}.</p>
+                    <button id="pay-doodad" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded">Pagar</button>
+                `;
+                this.showCardModal(content);
+                document.getElementById('pay-doodad').onclick = () => {
+                    fs.cash -= card.costo;
+                    this.logMessage(`Ha pagado un capricho: ${card.descripcion} por $${card.costo.toLocaleString()}.`, "event");
+                    if (fs.cash < 0) {
+                        this.logMessage("¡No tiene suficiente dinero! Necesita un préstamo.", "warning");
+                    }
+                    this.hideCardModal();
+                    this.updateUI();
+                };
+                break;
+            
+            case 'market':
+                // Lógica de mercado: vender un activo si se tiene
+                const assetToSell = fs.assets.find(a => a.nombre === card.activo_requerido);
+                if (assetToSell) {
+                     content = `
+                        <h3 class="text-xl font-bold mb-2 text-yellow-300">Mercado</h3>
+                        <p class="mb-4">${card.descripcion}. Te ofrecen $${card.valor_oferta.toLocaleString()} por tu activo "${card.activo_requerido}". ¿Deseas vender?</p>
+                        <div class="flex justify-around">
+                            <button id="sell-asset" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded">Vender</button>
+                            <button id="pass-sell" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded">No vender</button>
+                        </div>
+                    `;
+                    this.showCardModal(content);
+                    document.getElementById('sell-asset').onclick = () => {
+                        fs.cash += card.valor_oferta;
+                        fs.assets = fs.assets.filter(a => a.nombre !== card.activo_requerido);
+                        this.logMessage(`¡Ha vendido ${card.activo_requerido} por $${card.valor_oferta.toLocaleString()}!`, "event");
+                        this.hideCardModal();
+                        this.updateUI();
+                    };
+                    document.getElementById('pass-sell').onclick = () => this.hideCardModal();
+                } else {
+                     content = `
+                        <h3 class="text-xl font-bold mb-2 text-yellow-300">Mercado</h3>
+                        <p class="mb-4">${card.descripcion}. No tienes el activo requerido para esta oferta.</p>
+                        <button onclick="game.hideCardModal()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded">OK</button>
+                    `;
+                    this.showCardModal(content);
+                }
+                break;
+        }
+    }
+
+    // --- GESTIÓN DE DEUDA ---
+    showDebtModal() {
+        const player = this.players[this.currentPlayerIndex];
+        const fs = player.financialStatement;
+        this.dom.currentDebt.textContent = `$${(fs.liabilities['Préstamos Bancarios'] || 0).toLocaleString()}`;
+        this.dom.loanAmountInput.value = '';
+        this.dom.payDebtAmountInput.value = '';
+        this.dom.debtModal.classList.remove('hidden');
+    }
+
+    takeLoan() {
+        const player = this.players[this.currentPlayerIndex];
+        const fs = player.financialStatement;
+        const amount = parseInt(this.dom.loanAmountInput.value);
+        if (isNaN(amount) || amount <= 0 || amount % 1000 !== 0) {
+            alert("El monto debe ser un múltiplo positivo de 1000.");
+            return;
+        }
+        fs.cash += amount;
+        fs.liabilities['Préstamos Bancarios'] = (fs.liabilities['Préstamos Bancarios'] || 0) + amount;
+        fs.expenses['Pago de Préstamos'] = (fs.expenses['Pago de Préstamos'] || 0) + (amount * 0.10);
+        this.logMessage(`Ha recibido un préstamo de $${amount.toLocaleString()}.`, "event");
+        this.updateUI();
+        this.dom.debtModal.classList.add('hidden');
+    }
+
+    payDebt() {
+        const player = this.players[this.currentPlayerIndex];
+        const fs = player.financialStatement;
+        const amount = parseInt(this.dom.payDebtAmountInput.value);
+        const currentDebt = fs.liabilities['Préstamos Bancarios'] || 0;
+
+        if (isNaN(amount) || amount <= 0 || amount % 1000 !== 0) {
+            alert("El monto debe ser un múltiplo positivo de 1000.");
+            return;
+        }
+        if (amount > currentDebt) {
+            alert("No puedes pagar más de lo que debes.");
+            return;
+        }
+        if (amount > fs.cash) {
+            alert("No tienes suficiente dinero para pagar esa cantidad.");
+            return;
+        }
+
+        fs.cash -= amount;
+        fs.liabilities['Préstamos Bancarios'] -= amount;
+        fs.expenses['Pago de Préstamos'] -= (amount * 0.10);
+        if (fs.expenses['Pago de Préstamos'] <= 0) {
+            delete fs.expenses['Pago de Préstamos'];
+        }
+        this.logMessage(`Ha pagado $${amount.toLocaleString()} de su deuda bancaria.`, "event");
+        this.updateUI();
+        this.dom.debtModal.classList.add('hidden');
+    }
+
+    // --- CONDICIÓN DE VICTORIA ---
+    checkWinCondition(player) {
+        const fs = player.financialStatement;
+        return fs.getPassiveIncome() > fs.getTotalExpenses();
+    }
+
+    handleWin(player) {
+        this.logMessage(`¡FELICITACIONES, ${player.name}! ¡HAS ESCAPADO DE LA CARRERA DE LA RATA!`, "win");
+        const content = `
+            <h2 class="text-4xl font-bold mb-4 text-yellow-300 font-bebas">¡GANADOR!</h2>
+            <p class="text-xl mb-6">¡Felicidades, ${player.name}!</p>
+            <p class="mb-4">Tu Ingreso Pasivo ($${player.financialStatement.getPassiveIncome().toLocaleString()}) ha superado tus Gastos Totales ($${player.financialStatement.getTotalExpenses().toLocaleString()}).</p>
+            <p class="text-2xl font-bold text-green-400">¡HAS ESCAPADO DE LA CARRERA DE LA RATA!</p>
+        `;
+        this.showCardModal(content);
+        this.dom.rollDiceBtn.disabled = true;
+        this.dom.manageDebtBtn.disabled = true;
+        this.dom.nextTurnBtn.classList.add('hidden');
+    }
+
+    // --- ACTUALIZACIÓN DE LA INTERFAZ (UI) ---
+
+    drawBoard() {
+        this.dom.board.innerHTML = ''; // Limpiar tablero
+        const centerHtml = `
+            <div class="board-center">
+                <h1 class="font-bebas">CASHFLOW</h1>
+                <p>Sal de la Carrera de la Rata</p>
+            </div>`;
+        this.dom.board.innerHTML += centerHtml;
+        
+        const numSpaces = this.board.length;
+        const angleStep = 360 / numSpaces;
+
+        this.board.forEach((spaceName, i) => {
+            const angle = angleStep * i;
+            const spaceEl = document.createElement('div');
+            const spaceTypeClass = 'space-' + spaceName.toLowerCase().replace(' ', '').replace('í', 'i');
+            spaceEl.className = `board-space ${spaceTypeClass}`;
+            spaceEl.textContent = spaceName.replace(' ', '\n');
+            spaceEl.style.transform = `rotate(${angle}deg) translate(0, -325px) rotate(-${angle}deg)`;
+            this.dom.board.appendChild(spaceEl);
+        });
+    }
+
+    createPlayerTokens() {
+        this.players.forEach((player, i) => {
+            const token = document.createElement('div');
+            token.className = 'player-token';
+            token.style.backgroundColor = player.color;
+            // Posicionar tokens en el centro inicialmente, con un pequeño offset
+            const initialAngle = 0;
+            const radius = 15;
+            const x = 350 + radius * Math.cos(2 * Math.PI * i / this.players.length) - 10;
+            const y = 350 + radius * Math.sin(2 * Math.PI * i / this.players.length) - 10;
+            token.style.transform = `translate(${x}px, ${y}px)`;
+            
+            player.tokenElement = token;
+            this.dom.board.appendChild(token);
+        });
+        // Mover a la primera casilla
+        setTimeout(() => this.players.forEach(p => this.movePlayerToken(p, 0, 0, false)), 500);
+    }
+    
+    movePlayerToken(player, startPos, endPos, isAnimated = true) {
+        const numSpaces = this.board.length;
+        const angleStep = 360 / numSpaces;
+        const radius = 325; // Radio de la pista
+        const tokenSize = 20;
+
+        if (isAnimated) {
+            let currentPos = startPos;
+            const moveInterval = setInterval(() => {
+                currentPos = (currentPos + 1) % numSpaces;
+                const angle = angleStep * currentPos * (Math.PI / 180);
+                const x = 350 + radius * Math.sin(angle) - (tokenSize / 2);
+                const y = 350 - radius * Math.cos(angle) - (tokenSize / 2);
+                player.tokenElement.style.transform = `translate(${x}px, ${y}px)`;
+                if (currentPos === endPos) {
+                    clearInterval(moveInterval);
+                }
+            }, 100); // Velocidad de movimiento
+        } else {
+            const angle = angleStep * endPos * (Math.PI / 180);
+            const x = 350 + radius * Math.sin(angle) - (tokenSize / 2);
+            const y = 350 - radius * Math.cos(angle) - (tokenSize / 2);
+            player.tokenElement.style.transform = `translate(${x}px, ${y}px)`;
+        }
+    }
+
+    updateUI() {
+        // Actualizar indicador de turno
+        const currentPlayer = this.players[this.currentPlayerIndex];
+        this.dom.currentPlayerName.textContent = currentPlayer.name;
+
+        // Actualizar pestañas y contenido
+        this.dom.playerTabs.innerHTML = '';
+        this.dom.tabContentContainer.innerHTML = '';
+
+        this.players.forEach((player, index) => {
+            // Crear pestaña
+            const tabButton = document.createElement('button');
+            tabButton.className = `py-2 px-4 font-semibold rounded-t-lg border-b-2 border-transparent`;
+            tabButton.textContent = player.name;
+            tabButton.style.color = player.color;
+            if (index === this.currentPlayerIndex) {
+                tabButton.classList.add('active');
+                tabButton.style.borderColor = player.color;
+            }
+            tabButton.onclick = () => {
+                // Cambiar de pestaña activa visualmente (no cambia el turno)
+                document.querySelectorAll('.tabs button').forEach(b => {
+                    b.classList.remove('active');
+                    b.style.borderColor = 'transparent';
+                });
+                document.querySelectorAll('.financial-sheet-container').forEach(c => c.classList.add('hidden'));
+                
+                tabButton.classList.add('active');
+                tabButton.style.borderColor = player.color;
+                document.getElementById(`sheet-${index}`).classList.remove('hidden');
+            };
+            this.dom.playerTabs.appendChild(tabButton);
+
+            // Crear contenido de la hoja financiera
+            const sheetContainer = document.createElement('div');
+            sheetContainer.id = `sheet-${index}`;
+            sheetContainer.className = 'financial-sheet-container';
+            if (index !== this.currentPlayerIndex) {
+                sheetContainer.classList.add('hidden');
+            }
+            
+            const fs = player.financialStatement;
+            sheetContainer.innerHTML = this.getFinancialSheetHTML(player);
+            this.dom.tabContentContainer.appendChild(sheetContainer);
+        });
+    }
+    
+    getFinancialSheetHTML(player) {
+        const fs = player.financialStatement;
+        
+        const incomeRows = `
+            <tr><td>Sueldo</td><td class="text-right">$${(fs.income.Sueldo || 0).toLocaleString()}</td></tr>
+            ${fs.assets.map(a => `<tr><td>${a.nombre}</td><td class="text-right">$${a.flujo_caja.toLocaleString()}</td></tr>`).join('')}
+        `;
+        const expenseRows = Object.entries(fs.expenses).map(([key, value]) => `<tr><td>${key.replace(/_/g, ' ')}</td><td class="text-right">$${value.toLocaleString()}</td></tr>`).join('');
+        const assetRows = fs.assets.map(a => `<tr><td>${a.nombre}</td><td class="text-right">$${a.valor_venta.toLocaleString()}</td></tr>`).join('');
+        const liabilityRows = Object.entries(fs.liabilities).map(([key, value]) => `<tr><td>${key.replace(/_/g, ' ')}</td><td class="text-right">$${value.toLocaleString()}</td></tr>`).join('');
+
+        return `
+            <div class="financial-sheet space-y-3">
+                <p class="text-center font-bold">${player.professionName}</p>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="summary-label">Ingreso Pasivo:</span>
+                        <span class="summary-value float-right text-green-400">$${fs.getPassiveIncome().toLocaleString()}</span>
+                    </div>
+                    <div>
+                        <span class="summary-label">Gastos Totales:</span>
+                        <span class="summary-value float-right text-red-400">$${fs.getTotalExpenses().toLocaleString()}</span>
+                    </div>
+                    <div>
+                        <span class="summary-label">Flujo de Caja:</span>
+                        <span class="summary-value float-right text-yellow-400">$${fs.getMonthlyCashflow().toLocaleString()}</span>
+                    </div>
+                    <div>
+                        <span class="summary-label">Efectivo:</span>
+                        <span class="summary-value float-right text-blue-400">$${fs.cash.toLocaleString()}</span>
+                    </div>
+                </div>
+                 <p class="text-center text-sm mt-2">Sueño: <span class="italic text-gray-400">${player.dream}</span></p>
+
+                <!-- Tablas detalladas -->
+                 <div class="space-y-2 text-xs">
+                    <div><h4 class="font-bold text-gray-400">Ingresos</h4><table>${incomeRows}</table></div>
+                    <div><h4 class="font-bold text-gray-400">Gastos</h4><table>${expenseRows}</table></div>
+                    <div><h4 class="font-bold text-gray-400">Activos</h4><table>${assetRows}</table></div>
+                    <div><h4 class="font-bold text-gray-400">Pasivos</h4><table>${liabilityRows}</table></div>
+                 </div>
+            </div>
+        `;
+    }
+
+    logMessage(message, type = "system") {
+        const player = this.players[this.currentPlayerIndex];
+        const colors = {
+            system: "text-gray-400",
+            player: "text-blue-400",
+            event: "text-yellow-400",
+            warning: "text-red-400",
+            win: "text-green-400 font-bold text-lg",
+            game: "text-purple-400"
+        };
+        const logEntry = document.createElement('div');
+        logEntry.className = `log-message ${colors[type]}`;
+        logEntry.innerHTML = `<strong>[${type === 'player' ? player.name : type.toUpperCase()}]</strong> ${message}`;
+        this.dom.logContainer.appendChild(logEntry);
+        this.dom.logContainer.scrollTop = this.dom.logContainer.scrollHeight;
+    }
+
+    showDiceAnimation(finalResult, callback) {
+        this.dom.diceModal.classList.remove('hidden');
+        let count = 0;
+        const animationInterval = setInterval(() => {
+            const randomFace = Math.ceil(Math.random() * 6);
+            this.dom.diceAnimation.textContent = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'][randomFace - 1];
+            count++;
+            if (count > 10) {
+                clearInterval(animationInterval);
+                this.dom.diceAnimation.textContent = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'][finalResult - 1] || '⚅';
+                setTimeout(() => {
+                    this.dom.diceModal.classList.add('hidden');
+                    callback(finalResult);
+                }, 1000);
+            }
+        }, 100);
+    }
+    
+    showCardModal(content) {
+        this.dom.cardModalContent.innerHTML = content;
+        this.dom.cardModal.classList.remove('hidden');
+    }
+    
+    hideCardModal() {
+        this.dom.cardModal.classList.add('hidden');
+    }
+}
+
+// --- INICIALIZACIÓN DEL JUEGO ---
+const game = new Game();
+
+</script>
+</body>
+</html>
